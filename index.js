@@ -1,5 +1,7 @@
 const fs = require('fs')
 const inquirer = require('inquirer')
+const db = require('./db/connection')
+require("console.table")
 
 let openingPrompt = () => { 
  inquirer.prompt([
@@ -11,8 +13,17 @@ let openingPrompt = () => {
 },
 ]).then((ans1) => {
  console.log(ans1)
+if (ans1.initialPrompt === 'View All Departments') {
+  viewDepartment()
+}
+else if (ans1.initialPrompt === 'View All Roles') {
+  viewRoles()
+}
+else if (ans1.initialPrompt === 'View All Employees') {
+  viewEmployees()
+}
 
-if (ans1.initialPrompt === 'Add a Department') {
+else if (ans1.initialPrompt === 'Add a Department') {
  addDepartmentPrompt();
 }
 else if (ans1.initialPrompt === "Add a Role") {
@@ -21,8 +32,68 @@ else if (ans1.initialPrompt === "Add a Role") {
 else if (ans1.initialPrompt === "Add an Employee") {
  addEmployeePrompt()
 }
-})
+else if (ans1.initialPrompt === "Update an Employee Role") {
+updateEmployeePrompt()
 }
+else 
+console.log(error)
+})
+
+}
+
+let viewDepartment = () => {
+  const sql = `SELECT * FROM department`;
+
+ db.query(sql, (err, rows) => {
+  if (err) {
+   console.log({ error: err.message })
+   return openingPrompt();
+  } 
+  console.table(
+   rows
+  )
+  openingPrompt()
+ })
+}
+
+let viewRoles = () => {
+  const sql = `SELECT role.*, department.name
+  AS department_name
+  FROM role
+  LEFT JOIN department
+  ON role.department_id = department.id`;
+ 
+  db.query(sql, (err, rows) => {
+   if (err) {
+    console.loge({ error: err.message })
+    return openingPrompt();
+   } 
+   console.table(
+    rows
+   )
+   openingPrompt()
+  })
+}
+
+let viewEmployees = () => {
+  const sql = `SELECT employee.*, role.title AS role_title, role.salary AS role_salary, role.department_id
+  AS department_id
+  FROM employee
+  LEFT JOIN role
+  ON employee.role_id = role.id;`;
+ 
+  db.query(sql, (err, rows) => {
+   if (err) {
+    console.log({ error: err.message })
+    return openingPrompt();
+   } 
+   console.table(
+    rows
+   )
+   openingPrompt()
+  })
+}
+
 
 
 let addDepartmentPrompt = () => {
@@ -33,7 +104,15 @@ let addDepartmentPrompt = () => {
  message: 'Please enter the name of the department',
 },
 ]).then((ans2) => {
- console.log(ans2)
+  const sql = `INSERT INTO department (name) VALUES (?)`
+  const params = [ans2.addDepartment]
+  db.query(sql, params, (err, rows) => {
+    if (err) {
+      console.log({ error: err.message })
+      return openingPrompt();
+     } 
+     viewDepartment()
+  })
 })
 }
 
@@ -50,12 +129,21 @@ inquirer.prompt([
  message: 'Please enter the salary of the role',
 },
 {
- type: 'input',
+ type: 'list',
  name: 'addRoleDepartment',
- message: "Please enter the role's department",
+ message: "Please enter the role's department id",
+ choices: [{name:"Information Technology", value: 1}, {name:"Human Resources", value: 2}, {name:"Accounting", value: 3}]
 },
 ]).then((ans3) => {
- console.log(ans3)
+  const sql = `INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)`
+  const params = [ans3.addRole, ans3.addRoleSalary, ans3.addRoleDepartment]
+  db.query(sql, params, (err, rows) => {
+    if (err) {
+      console.log({ error: err.message })
+      return openingPrompt();
+     } 
+    viewRoles()
+  })
 })
 }
 
@@ -80,24 +168,78 @@ let addEmployeePrompt = () => {
   {
    type: 'input',
    name: 'addEmployeeManager',
-   message: "Please enter name of the employee's manager",
+   message: "Please enter id of the employee's manager",
   },
  ]).then((ans4) => {
-  console.log(ans4)
- })
+  const sql = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)`
+  const params = [ans4.addEmployee_fn, ans4.addEmployee_ln, ans4.addEmployeeRole, ans4.addEmployeeManager]
+  db.query(sql, params, (err, rows) => {
+    if (err) {
+      console.log({ error: err.message })
+      return openingPrompt;
+    } 
+    viewEmployees()
+  })
+})
 }
+
+
 
 
 let updateEmployeePrompt = () => {
  inquirer.prompt([
   {
-   type: 'input',
+   type: 'list',
    name: 'updateEmployee',
-   choices: [],
+   message: 'Choose the employee you would like to update',
+   choices: [{name: "Bob Johnson", value: 1}, {name: "Steve Stevens", value: 2}],
   },
  ]).then((ans5) => {
-  console.log(ans5)
- })
+   console.log(ans5)
+  inquirer.prompt([
+    {
+     type: 'list',
+     name: 'employeeChoice',
+     message: 'Please choose what you would like to update',
+     choices: ['First name', 'Last name', 'Employee role', 'Manager']
+    },
+    {
+     type: 'input',
+     name: 'employeeInput',
+     message: 'Please enter the updated information',
+    },
+    
+    
+    
+   ]).then((ans6) => {
+     if (ans6.employeeChoice === 'First name'){
+    const sql = `UPDATE employee SET first_name = ?
+    WHERE employee.id = ${ans5.updateEmployee}`
+    const params = [ans6.employeeInput]
+    db.query(sql, params, (err, rows) => {
+      if (err) {
+        console.log({ error: err.message })
+        return openingPrompt;
+      } 
+    
+    })
+    viewEmployees()
+  }
+  else if (ans6.employeeChoice === 'Last name'){
+    const sql = `UPDATE employee SET last_name = ?
+    WHERE employee.id = ${ans5.updateEmployee}`
+    const params = [ans6.employeeInput]
+    db.query(sql, params, (err, rows) => {
+      if (err) {
+        console.log({ error: err.message })
+        return openingPrompt;
+      } 
+    })
+    viewEmployees()
+  }
+})
+})
 }
+
 
 openingPrompt();
