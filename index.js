@@ -119,9 +119,10 @@ let addDepartmentPrompt = () => {
 let addRolePrompt = () => {
 inquirer.prompt([
 {
- type: 'input',
+ type: 'list',
  name: 'addRole',
- message: 'Please enter the name of the role',
+ message: "Please choose the employee's role",
+ choices: [{name: "Software Developer", value: 1}, {name:"Human Resources Representative", value: 2}, {name: "Accountant", value: 3}]
 },
 {
  type: 'input',
@@ -201,7 +202,7 @@ let updateEmployeePrompt = () => {
      type: 'list',
      name: 'employeeChoice',
      message: 'Please choose what you would like to update',
-     choices: ['First name', 'Last name', 'Employee role', 'Manager']
+     choices: ['First name', 'Last name', 'Employee role ID', 'Manager ID']
     },
     {
      type: 'input',
@@ -227,6 +228,30 @@ let updateEmployeePrompt = () => {
   }
   else if (ans6.employeeChoice === 'Last name'){
     const sql = `UPDATE employee SET last_name = ?
+    WHERE employee.id = ${ans5.updateEmployee}`
+    const params = [ans6.employeeInput]
+    db.query(sql, params, (err, rows) => {
+      if (err) {
+        console.log({ error: err.message })
+        return openingPrompt;
+      } 
+    })
+    viewEmployees()
+  }
+  else if (ans6.employeeChoice === 'Employee role ID'){
+    const sql = `UPDATE employee SET role_id = ?
+    WHERE employee.id = ${ans5.updateEmployee}`
+    const params = [ans6.employeeInput]
+    db.query(sql, params, (err, rows) => {
+      if (err) {
+        console.log({ error: err.message })
+        return openingPrompt;
+      } 
+    })
+    viewEmployees()
+  }
+  else if (ans6.employeeChoice === 'Manager ID'){
+    const sql = `UPDATE employee SET manager_id = ?
     WHERE employee.id = ${ans5.updateEmployee}`
     const params = [ans6.employeeInput]
     db.query(sql, params, (err, rows) => {
